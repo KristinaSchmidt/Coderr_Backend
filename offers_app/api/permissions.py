@@ -1,0 +1,14 @@
+from rest_framework.permissions import BasePermission
+
+from auth_app.models import Profile
+
+
+class IsBusinessUser(BasePermission):
+    def has_permission(self, request, view):
+        profile = getattr(request.user, "profile", None)
+        return bool(request.user.is_authenticated and profile and profile.type == Profile.BUSINESS)
+
+
+class IsOfferOwner(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return obj.user == request.user
