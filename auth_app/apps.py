@@ -1,0 +1,10 @@
+"""Application configuration for authentication and profiles."""
+
+from django.apps import AppConfig
+
+
+class AuthAppConfig(AppConfig):
+    """Configure the auth_app Django application."""
+
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "auth_app"
