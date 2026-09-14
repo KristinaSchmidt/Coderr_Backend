@@ -125,6 +125,36 @@ class OfferApiTests(APITestCase):
         self.assertEqual(self.client.get("/api/offers/?min_price=150").data["count"], 0)
         self.assertEqual(self.client.get("/api/offers/?max_delivery_time=5").data["count"], 1)
 
+    def test_patch_returns_fresh_nested_detail_data(self):
+        """PATCH response must contain the values saved for nested details."""
+        created = self.create_offer()
+        response = self.client.patch(
+            f"/api/offers/{created.data['id']}/",
+            {"details": [{"offer_type": "basic", "title": "Updated Basic"}]},
+            format="json",
+        )
+        basic = next(
+            item for item in response.data["details"]
+            if item["offer_type"] == "basic"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(basic["title"], "Updated Basic")
+
+    def test_patch_detail_without_offer_type_returns_400(self):
+        """Malformed nested PATCH data must return JSON validation errors."""
+        created = self.create_offer()
+        response = self.client.patch(
+            f"/api/offers/{created.data['id']}/",
+            {"details": [{"title": "Missing type"}]},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_invalid_delivery_filter_returns_400(self):
+        """Invalid numeric filters must not raise an unhandled server error."""
+        response = self.client.get('/api/offers/?max_delivery_time="test"')
+        self.assertEqual(response.status_code, 400)
+
     def test_base_info_is_public(self):
         self.create_offer()
         self.client.credentials()

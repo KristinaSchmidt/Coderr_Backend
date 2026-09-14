@@ -1,6 +1,8 @@
 """Views for order creation, listing, status and counters."""
 
+from django.contrib.auth.models import User
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -76,16 +78,20 @@ class OrderCountView(APIView):
     permission_classes = [IsAuthenticated]
     status_value = Order.IN_PROGRESS
 
+    response_key = "order_count"
+
     def get(self, request, business_user_id):
-        """Count orders with this view's configured status."""
+        """Count matching orders and return 404 for an unknown user."""
+        get_object_or_404(User, pk=business_user_id)
         count = Order.objects.filter(
             business_user_id=business_user_id,
             status=self.status_value,
         ).count()
-        return Response({"order_count": count})
+        return Response({self.response_key: count})
 
 
 class CompletedOrderCountView(OrderCountView):
     """Return the number of completed orders for a business user."""
 
     status_value = Order.COMPLETED
+    response_key = "completed_order_count"

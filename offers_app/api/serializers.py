@@ -147,8 +147,12 @@ class OfferWriteSerializer(serializers.ModelSerializer):
         read_only_fields = ["id"]
 
     def validate_details(self, value):
-        """Validate either all three create details or patch subsets."""
+        """Validate create details and identify every patched detail."""
         types = [item.get("offer_type") for item in value]
+        if any(offer_type is None for offer_type in types):
+            raise serializers.ValidationError(
+                "Each detail must include an offer_type."
+            )
         if len(types) != len(set(types)):
             raise serializers.ValidationError("Offer types must be unique.")
         if self.instance is None:
@@ -199,9 +203,15 @@ class OfferWriteSerializer(serializers.ModelSerializer):
     def _update_details(offer, details):
         """Update only submitted detail types and preserve their ids."""
         for data in details:
-            offer_type = data.pop("offer_type")
-            detail = offer.details.get(offer_type=offer_type)
-            for field, value in data.items():
+            detail_data = dict(data)
+            offer_type = detail_data.pop("offer_type")
+            try:
+                detail = offer.details.get(offer_type=offer_type)
+            except OfferDetail.DoesNotExist as exc:
+                raise serializers.ValidationError(
+                    {"details": f"Unknown offer_type: {offer_type}."}
+                ) from exc
+            for field, value in detail_data.items():
                 setattr(detail, field, value)
             detail.save()
 

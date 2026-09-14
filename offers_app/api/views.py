@@ -2,6 +2,7 @@
 
 from django.db.models import Avg, Min
 from rest_framework import generics, status
+from rest_framework.exceptions import ParseError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -43,7 +44,7 @@ class OfferListCreateView(generics.ListCreateAPIView):
         """Return offers with annotations used by filters and ordering."""
         queryset = Offer.objects.select_related("user").prefetch_related(
             "details"
-        ).order_by("id")
+        )
         queryset = queryset.annotate(
             min_price=Min("details__price"),
             min_delivery_time=Min("details__delivery_time_in_days"),
@@ -51,17 +52,29 @@ class OfferListCreateView(generics.ListCreateAPIView):
         return self._apply_custom_filters(queryset)
 
     def _apply_custom_filters(self, queryset):
-        """Apply creator, minimum-price and delivery-time filters."""
+        """Apply documented numeric filters with clean 400 responses."""
         params = self.request.query_params
-        if params.get("creator_id"):
-            queryset = queryset.filter(user_id=params["creator_id"])
-        if params.get("min_price"):
-            queryset = queryset.filter(min_price__gte=params["min_price"])
-        if params.get("max_delivery_time"):
-            queryset = queryset.filter(
-                min_delivery_time__lte=params["max_delivery_time"]
-            )
+        creator_id = self._parse_number(params, "creator_id", int)
+        min_price = self._parse_number(params, "min_price", float)
+        delivery = self._parse_number(params, "max_delivery_time", int)
+        if creator_id is not None:
+            queryset = queryset.filter(user_id=creator_id)
+        if min_price is not None:
+            queryset = queryset.filter(min_price__gte=min_price)
+        if delivery is not None:
+            queryset = queryset.filter(min_delivery_time__lte=delivery)
         return queryset.distinct()
+
+    @staticmethod
+    def _parse_number(params, name, converter):
+        """Convert one optional query parameter or raise HTTP 400."""
+        value = params.get(name)
+        if value in (None, ""):
+            return None
+        try:
+            return converter(value)
+        except (TypeError, ValueError) as exc:
+            raise ParseError(f"Invalid value for '{name}'.") from exc
 
     def create(self, request, *args, **kwargs):
         """Create an offer and return complete nested detail objects."""
@@ -106,6 +119,7 @@ class OfferDetailView(generics.RetrieveUpdateDestroyAPIView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        offer = self.get_queryset().get(pk=offer.pk)
         output = OfferWriteResponseSerializer(offer)
         return Response(output.data, status=status.HTTP_200_OK)
 

@@ -22,14 +22,14 @@ class IsBusinessOrderOwner(BasePermission):
     """Allow order status changes only for the assigned business user."""
 
     def has_permission(self, request, view):
-        """Return whether the request user has a business profile."""
-        profile = getattr(request.user, "profile", None)
-        return bool(
-            request.user.is_authenticated
-            and profile
-            and profile.type == Profile.BUSINESS
-        )
+        """Let object lookup happen before checking business ownership."""
+        return request.user.is_authenticated
 
     def has_object_permission(self, request, view, obj):
-        """Return whether the order belongs to this business user."""
-        return obj.business_user == request.user
+        """Allow only the assigned business user to change the order."""
+        profile = getattr(request.user, "profile", None)
+        return bool(
+            profile
+            and profile.type == Profile.BUSINESS
+            and obj.business_user == request.user
+        )

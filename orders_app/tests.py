@@ -109,4 +109,25 @@ class OrderApiTests(APITestCase):
             f"/api/completed-order-count/{self.business.id}/"
         )
         self.assertEqual(active.data["order_count"], 1)
-        self.assertEqual(completed.data["order_count"], 1)
+        self.assertEqual(completed.data["completed_order_count"], 1)
+
+    def test_missing_order_returns_404_before_role_check(self):
+        """A non-existing order id must return 404, not a permission 403."""
+        self.auth(self.customer)
+        response = self.client.patch(
+            "/api/orders/9999/", {"status": "completed"}, format="json"
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_order_count_unknown_user_returns_404(self):
+        """Order count endpoints must reject unknown business user ids."""
+        self.auth(self.business)
+        response = self.client.get("/api/order-count/9999/")
+        self.assertEqual(response.status_code, 404)
+
+    def test_completed_order_count_unknown_user_returns_404(self):
+        """Completed count endpoint must reject unknown business user ids."""
+        self.auth(self.business)
+        response = self.client.get("/api/completed-order-count/9999/")
+        self.assertEqual(response.status_code, 404)
+
