@@ -1,3 +1,11 @@
+## Live Demo
+
+Frontend: https://coderr-frontend-m3ij.onrender.com
+
+Backend API: https://coderr-backend-3lj8.onrender.com/api/base-info/
+
+Das Projekt ist vollständig deployed und öffentlich erreichbar.
+
 # Coderr Backend
 
 REST-Backend für das Abschlussprojekt **Coderr** der Developer Akademie.
