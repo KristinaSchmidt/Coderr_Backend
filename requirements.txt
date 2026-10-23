@@ -7,3 +7,7 @@ djangorestframework==3.16.1
 pillow==11.3.0
 sqlparse==0.5.3
 tzdata==2025.2
+gunicorn
+dj-database-url
+psycopg2-binary
+whitenoise
